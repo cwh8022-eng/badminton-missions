@@ -36,10 +36,10 @@
     /* Modal */
     .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50; }
     .modal.show { display:flex; }
-    .modal-card { width: min(960px, 92vw); background:#fff; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,.18); }
+    .modal-card { width: min(460px, 92vw); background:#fff; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,.18); }
     .modal-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid #eee; }
     .close-x { font-size:20px; font-weight:700; cursor:pointer; }
-    .modal-body { padding:0; }
+    .modal-body { padding:1rem; }
 
     /* 按鈕/徽章 */
     .btn { padding:.6rem 1rem; border-radius:.75rem; font-weight:700; }
@@ -79,9 +79,9 @@
   <!-- 頁首 -->
   <header class="text-center px-4 py-6">
     <h1 class="text-3xl md:text-4xl font-extrabold text-[var(--headline)]">羽球技能闖關任務單</h1>
-    
+  </header>
 
-  <!-- 登入區（移除教師模式/排行榜） -->
+  <!-- 登入區 -->
   <section id="loginSection" class="max-w-xl card mx-auto p-6 my-6">
     <h2 class="text-xl font-bold">學生登入</h2>
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -95,7 +95,6 @@
 
   <!-- 主內容 -->
   <main id="app" class="container mx-auto px-4 pb-20 hidden">
-    <!-- 控制列（保留問候與登出） -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-2">
         <span id="helloText" class="font-bold"></span>
@@ -105,7 +104,7 @@
       </div>
     </div>
 
-    <!-- 進度總覽（5 關） -->
+    <!-- 進度總覽 -->
     <section class="card p-4 mb-6">
       <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4">
         <div class="justify-self-center">
@@ -123,7 +122,7 @@
       </div>
     </section>
 
-    <!-- 關卡區（5 張卡片） -->
+    <!-- 關卡卡片 -->
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div id="cards" class="contents"></div>
     </section>
@@ -159,31 +158,48 @@
     </div>
   </div>
 
+  <!-- 密碼 Modal -->
+  <div id="passwordModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="font-bold" id="passwordTitle">輸入密碼</h3>
+        <span class="close-x" onclick="closePassword()">✖</span>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3 text-gray-700" id="passwordDesc"></p>
+        <input id="passwordInput" type="password" placeholder="請輸入密碼"
+               class="border rounded-lg p-2 w-full mb-3" />
+        <button class="btn btn-green w-full" id="passwordBtn">確認</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ===== 常量設定（5 關） =====
+    // ===== 常量設定 =====
     const TOTAL = 5;
     const PASSWORD = "888";
     let currentStudent = null;
+    let currentChallenge = null;
 
-    // Glossary（沿用原始羽球五關文字）
+    // Glossary
     const GLOSSARY = {
-      '後場高遠球': '高遠球是從後場將球高弧度打向對方後場的基本技術。重點是側身引拍、擊球點在身體前上方，出拍時配合身體轉動，想像把球「送上去、送到遠方」。',
-      '網前放球': '放小球需要細膩手感。拍面要穩、力量小而連續，讓球貼網下墜。擊球點在胸口到肩膀之間、靠近網帶位置。',
-      '殺球練習': '殺球是向下的進攻球。抬肘引拍、身體向前上方延伸，擊球點在最高點稍前方，落地要有緩衝。先求穩定與落點，再追求力量。',
-      '基礎對打': '強調節奏與穩定。用七成功力，球過中線就回，專注步伐到位、拍面穩、落點清楚，可先建立「一高一平」的節奏。',
-      '米字步法': '模擬八方向移動（前、後、左、右與四個斜線）。關鍵是起動快、最後兩步小碎步調整、回中立位時重心在前腳掌。'
+      '後場高遠球': '高遠球是從後場將球高弧度打向對方後場的基本技術。',
+      '網前放球': '放小球需要細膩手感，讓球貼網下墜。',
+      '殺球練習': '殺球是向下的進攻球，擊球點在最高點稍前方。',
+      '基礎對打': '強調節奏與穩定，專注步伐到位、拍面穩。',
+      '米字步法': '模擬八方向移動，回中立位時重心在前腳掌。'
     };
 
-    // 關卡資料（含你指定的影片）
+    // 關卡
     const CHALLENGES = [
-      {title:'後場高遠球', goal:'將球高弧度送到對方後場。', method:'與搭檔站在底線，連續 5 次成功打到後場區域。', video:'https://www.youtube.com/watch?v=CJXAXS82m5M'},
-      {title:'網前放球', goal:'控制輕柔過網與落點。', method:'在網前互相放小球，連續 5 次落在網前 1 公尺內。', video:'https://www.youtube.com/watch?v=dR-NXBW2m5c'},
-      {title:'殺球練習', goal:'學習向下發力與擊球動作。', method:'搭檔拋球到頭頂上方，連續 3 次將球向下打入對面場地。', video:'https://www.youtube.com/watch?v=lZSFU_OpbCw'},
-      {title:'基礎對打', goal:'建立回擊穩定度與協調性。', method:'以輕鬆力道來回對打，連續 10 次不落地。', video:'https://www.youtube.com/watch?v=3A22dThPUT0'},
-      {title:'米字步法', goal:'熟悉全場八方向移動。', method:'由中心依序移動至八個方向並回中心，於 60 秒內完成一循環。', video:'https://www.youtube.com/watch?v=b0ZXWXMsVDM'}
+      {title:'後場高遠球', goal:'將球高弧度送到對方後場。', method:'連續 5 次成功打到後場區域。', video:'https://www.youtube.com/watch?v=CJXAXS82m5M'},
+      {title:'網前放球', goal:'控制輕柔過網與落點。', method:'連續 5 次落在網前 1 公尺內。', video:'https://www.youtube.com/watch?v=dR-NXBW2m5c'},
+      {title:'殺球練習', goal:'學習向下發力與擊球動作。', method:'連續 3 次將球向下打入對面場地。', video:'https://www.youtube.com/watch?v=lZSFU_OpbCw'},
+      {title:'基礎對打', goal:'建立回擊穩定度與協調性。', method:'來回對打 10 次不落地。', video:'https://www.youtube.com/watch?v=3A22dThPUT0'},
+      {title:'米字步法', goal:'熟悉全場八方向移動。', method:'60 秒內完成一循環。', video:'https://www.youtube.com/watch?v=b0ZXWXMsVDM'}
     ];
 
-    // ===== 小工具 =====
+    // 工具
     const qs = (sel) => document.querySelector(sel);
     const nowISO = () => new Date().toISOString();
     function keyFor(student) { return `badminton_${student}`; }
@@ -191,7 +207,7 @@
     function setProgress(student, obj) { localStorage.setItem(keyFor(student), JSON.stringify(obj)); }
     function beep() { const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='triangle'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32); o.start(); o.stop(ctx.currentTime + 0.33); }
 
-    // ===== 登入 / 登出 =====
+    // 登入 / 登出
     function login() {
       const id = qs('#studentId').value.trim();
       const name = qs('#studentName').value.trim();
@@ -207,13 +223,13 @@
     }
     function logout(){ currentStudent=null; qs('#app').classList.add('hidden'); qs('#loginSection').classList.remove('hidden'); qs('#studentId').value=''; qs('#studentName').value=''; }
 
-    // ===== 關卡渲染 =====
+    // 卡片
     function cardTemplate(idx, c){
       return `
       <article class="card p-5 stamp-wrap relative">
-        <svg id="stamp${idx}" class="stamp-svg" viewBox="0 0 120 120" aria-hidden="true">
+        <svg id="stamp${idx}" class="stamp-svg" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="46" fill="none" stroke="#ef4444" stroke-width="6"></circle>
-          <text x="60" y="66" text-anchor="middle" font-size="26" font-weight="800" fill="#ef4444" style="letter-spacing:2px;">完成</text>
+          <text x="60" y="66" text-anchor="middle" font-size="22" font-weight="800" fill="#ef4444">完成</text>
         </svg>
         <h3 class="text-xl font-bold text-[var(--headline)] mb-2">關卡${idx}：${c.title}</h3>
         <p class="text-sm text-gray-700"><b>目標：</b>${c.goal}</p>
@@ -227,18 +243,47 @@
     }
     function renderCards(){ qs('#cards').innerHTML = CHALLENGES.map((c,i)=>cardTemplate(i+1,c)).join(''); }
 
-    // ===== 印章與驗證 =====
+    // 印章驗證
     function loadStamps(){ const p=getProgress(currentStudent); for(let i=1;i<=TOTAL;i++){ if(p['challenge'+i]===true) qs('#stamp'+i)?.classList.add('stamp-bounce'); } }
     function markDone(i){ const el=qs('#stamp'+i); if(!el) return; el.classList.remove('stamp-bounce'); void el.offsetWidth; el.classList.add('stamp-bounce'); }
-    function verify(i, title){
-      const input = prompt(`請輸入密碼以確認「關卡${i}：${title}」過關：`);
-      const p = getProgress(currentStudent); if(!p._meta) p._meta={createdAt:nowISO(),lastUpdatedAt:nowISO(),wrongPassword:{},firstFinishAt:null};
-      if(input===null) return;
-      if(input===PASSWORD){ p['challenge'+i]=true; p._meta.lastUpdatedAt=nowISO(); const count=countCompleted(p); if(count===TOTAL && !p._meta.firstFinishAt) p._meta.firstFinishAt=nowISO(); setProgress(currentStudent,p); markDone(i); beep(); updateOverall(); alert(`🎉 恭喜！關卡${i} 已通過！`); }
-      else { const wp=p._meta.wrongPassword||{}; wp[i]=(wp[i]||0)+1; p._meta.wrongPassword=wp; p._meta.lastUpdatedAt=nowISO(); setProgress(currentStudent,p); alert(wp[i]>=3?'❗ 已錯誤輸入 3 次，請確認是否完成任務再嘗試。':'❌ 密碼錯誤，請再試一次。'); }
-    }
 
-    // ===== 進度 + 獎勵 =====
+    function verify(i, title){
+      currentChallenge = { i, title };
+      qs('#passwordTitle').textContent = `驗證：關卡${i} ${title}`;
+      qs('#passwordDesc').textContent = `請輸入密碼以確認「關卡${i}：${title}」過關：`;
+      qs('#passwordInput').value = '';
+      qs('#passwordModal').classList.add('show');
+    }
+    function closePassword(){ qs('#passwordModal').classList.remove('show'); }
+
+    document.getElementById('passwordBtn').addEventListener('click', () => {
+      const input = document.getElementById('passwordInput').value;
+      const { i, title } = currentChallenge;
+      const p = getProgress(currentStudent);
+      if(!p._meta) p._meta={createdAt:nowISO(),lastUpdatedAt:nowISO(),wrongPassword:{},firstFinishAt:null};
+
+      if(input===PASSWORD){
+        p['challenge'+i]=true;
+        p._meta.lastUpdatedAt=nowISO();
+        const count=countCompleted(p);
+        if(count===TOTAL && !p._meta.firstFinishAt) p._meta.firstFinishAt=nowISO();
+        setProgress(currentStudent,p);
+        markDone(i);
+        beep();
+        updateOverall();
+        alert(`🎉 恭喜！關卡${i} 已通過！`);
+        closePassword();
+      } else {
+        const wp=p._meta.wrongPassword||{};
+        wp[i]=(wp[i]||0)+1;
+        p._meta.wrongPassword=wp;
+        p._meta.lastUpdatedAt=nowISO();
+        setProgress(currentStudent,p);
+        alert(wp[i]>=3?'❗ 已錯誤輸入 3 次，請確認是否完成任務再嘗試。':'❌ 密碼錯誤，請再試一次。');
+      }
+    });
+
+    // 進度 + 獎勵
     let overallChart;
     function countCompleted(p){ return Object.keys(p).filter(k=>k.startsWith('challenge') && p[k]===true).length; }
     function updateOverall(){
@@ -255,11 +300,11 @@
     function showTrophy(){ document.getElementById('trophy').classList.add('show'); beep(); }
     function hideTrophy(){ document.getElementById('trophy').classList.remove('show'); }
 
-    // ===== Modal：Glossary / Video =====
-    function openGlossary(title){ document.getElementById('glossaryTitle').textContent = `說明術語：${title}`; document.getElementById('glossaryBody').textContent = GLOSSARY[title] || '（尚無說明）'; document.getElementById('glossaryModal').classList.add('show'); }
-    function closeGlossary(){ document.getElementById('glossaryModal').classList.remove('show'); }
-    function openVideo(i,title,url){ document.getElementById('videoTitle').textContent = `學習資源：關卡${i}「${title}」`; const src = url.includes('embed')?url:url.replace('watch?v=','embed/'); document.getElementById('videoFrame').src = src+'?autoplay=1&rel=0'; document.getElementById('videoModal').classList.add('show'); }
-    function closeVideo(){ document.getElementById('videoFrame').src=''; document.getElementById('videoModal').classList.remove('show'); }
+    // Modal
+    function openGlossary(title){ qs('#glossaryTitle').textContent = `說明術語：${title}`; qs('#glossaryBody').textContent = GLOSSARY[title] || '（尚無說明）'; qs('#glossaryModal').classList.add('show'); }
+    function closeGlossary(){ qs('#glossaryModal').classList.remove('show'); }
+    function openVideo(i,title,url){ qs('#videoTitle').textContent = `學習資源：關卡${i}「${title}」`; const src = url.includes('embed')?url:url.replace('watch?v=','embed/'); qs('#videoFrame').src = src+'?autoplay=1&rel=0'; qs('#videoModal').classList.add('show'); }
+    function closeVideo(){ qs('#videoFrame').src=''; qs('#videoModal').classList.remove('show'); }
   </script>
 </body>
 </html>
