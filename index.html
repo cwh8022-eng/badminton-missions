@@ -18,6 +18,8 @@
     }
     body { background: var(--paper); color: var(--ink); }
     .card { background:#fff; border-radius: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+
+    /* 完成印章（沿用設計原理） */
     .stamp-wrap { position: relative; }
     .stamp-svg {
       position:absolute; top:-10px; left:50%; transform:translateX(-50%) rotate(-8deg) scale(0.2);
@@ -30,20 +32,28 @@
       60% { transform:translateX(-50%) rotate(-6deg) scale(1.15); opacity:1; }
       100% { transform:translateX(-50%) rotate(-8deg) scale(1); opacity:1; }
     }
+
+    /* Modal */
     .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50; }
     .modal.show { display:flex; }
     .modal-card { width: min(960px, 92vw); background:#fff; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,.18); }
     .modal-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid #eee; }
     .close-x { font-size:20px; font-weight:700; cursor:pointer; }
     .modal-body { padding:0; }
+
+    /* 徽章 */
     .badge { display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .75rem; border-radius:999px; font-weight:700; }
     .badge-silver { background:#eef2ff; border:2px solid #c7d2fe; }
     .badge-gold { background:#fff7e6; border:2px solid #facc15; }
     .badge-trophy { background:#fff1f2; border:2px solid #fb7185; }
+
+    /* 金色獎盃動畫 */
     .trophy-wrap { position:fixed; left:50%; top:-40vh; transform:translateX(-50%); z-index:60; pointer-events:none; display:none; }
     .trophy-wrap.show { display:block; animation: dropIn 1s ease-out forwards, glow 2s ease-in-out 1s infinite alternate; }
     @keyframes dropIn { 0% { top:-40vh; } 80% { top:15vh; } 100% { top:18vh; } }
     @keyframes glow { from { filter: drop-shadow(0 0 0 rgba(250, 204, 21, .8)); } to { filter: drop-shadow(0 0 18px rgba(250, 204, 21, 1)); } }
+
+    /* 小工具 */
     .btn { padding:.6rem 1rem; border-radius:.75rem; font-weight:700; }
     .btn-green { background:var(--success); color:#fff; }
     .btn-purple { background:var(--accent); color:#fff; }
@@ -53,31 +63,236 @@
   </style>
 </head>
 <body class="min-h-screen">
-  <div id="trophy" class="trophy-wrap" aria-hidden="true">...</div>
-  <header class="text-center px-4 py-6">...</header>
-  <section id="loginSection" class="max-w-xl card mx-auto p-6 my-6">...</section>
-  <main id="app" class="container mx-auto px-4 pb-20 hidden">...</main>
-  <div id="glossaryModal" class="modal" role="dialog" aria-modal="true">...</div>
-  <div id="videoModal" class="modal" role="dialog" aria-modal="true">...</div>
-  <div id="leaderboardModal" class="modal" role="dialog" aria-modal="true">...</div>
+  <!-- 金色獎盃 -->
+  <div id="trophy" class="trophy-wrap" aria-hidden="true">
+    <svg width="220" height="220" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#facc15"/><stop offset="100%" stop-color="#eab308"/></linearGradient></defs>
+      <g fill="url(#g)" stroke="#92400e" stroke-width="1">
+        <path d="M12 8h40v6a14 14 0 0 1-14 14H26A14 14 0 0 1 12 14z"/>
+        <path d="M16 8v-4h32v4z"/>
+        <rect x="28" y="28" width="8" height="8" rx="1"/>
+        <rect x="24" y="36" width="16" height="6" rx="1"/>
+        <rect x="20" y="42" width="24" height="6" rx="1"/>
+        <rect x="16" y="48" width="32" height="6" rx="1"/>
+      </g>
+      <circle cx="32" cy="19" r="7" fill="#fde68a" opacity=".7"/>
+    </svg>
+  </div>
+
+  <!-- 頁首 -->
+  <header class="text-center px-4 py-6">
+    <h1 class="text-3xl md:text-4xl font-extrabold text-[var(--headline)]">羽球技能闖關任務單</h1>
+
+  <!-- 登入區 -->
+  <section id="loginSection" class="max-w-xl card mx-auto p-6 my-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold">學生登入</h2>
+      <span id="modePill" class="badge teacher-badge hidden">教師模式</span>
+    </div>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input id="studentId" class="border rounded-lg p-3" placeholder="學號" />
+      <input id="studentName" class="border rounded-lg p-3" placeholder="姓名" />
+    </div>
+    <div class="mt-4 flex gap-3">
+      <button class="btn btn-green" onclick="login()">登入</button>
+      <button class="btn btn-ghost" onclick="toggleTeacherMode()">切換教師模式</button>
+    </div>
+    <p class="text-xs text-gray-500 mt-3">提示：教師模式可查看排行榜與總覽，用於課堂展示。</p>
+  </section>
+
+  <!-- 主內容 -->
+  <main id="app" class="container mx-auto px-4 pb-20 hidden">
+    <!-- 控制列 -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <span id="helloText" class="font-bold"></span>
+        <span id="modePill2" class="badge teacher-badge hidden">教師模式</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-purple" onclick="openLeaderboard()">排行榜</button>
+        <button class="btn btn-red" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <!-- 進度總覽（5 關） -->
+    <section class="card p-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4">
+        <div class="justify-self-center">
+          <canvas id="overallChart" width="220" height="220" aria-label="總進度圖" role="img"></canvas>
+        </div>
+        <div class="md:col-span-2">
+          <h3 class="text-xl font-bold mb-2">個人進度</h3>
+          <p id="overallText" class="text-sm text-gray-700 mb-3">已完成 0/5 (0%)</p>
+          <div class="flex flex-wrap gap-2 items-center">
+            <span id="badge3" class="badge badge-silver hidden">🥈 銀牌（3/5）</span>
+            <span id="badge4" class="badge badge-gold hidden">🥇 金牌（4/5）</span>
+            <span id="badge5" class="badge badge-trophy hidden">🏆 全部完成（5/5）</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 關卡區（5 張卡片） -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div id="cards" class="contents"></div>
+    </section>
+  </main>
+
+  <!-- 術語 Modal -->
+  <div id="glossaryModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="font-bold" id="glossaryTitle">說明術語</h3>
+        <span class="close-x" onclick="closeGlossary()">✖</span>
+      </div>
+      <div class="modal-body p-4">
+        <p id="glossaryBody" class="text-gray-800 leading-7"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 影片 Modal -->
+  <div id="videoModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="font-bold" id="videoTitle">學習資源</h3>
+        <span class="close-x" onclick="closeVideo()">✖</span>
+      </div>
+      <div class="modal-body">
+        <div class="aspect-video w-full">
+          <iframe id="videoFrame" class="w-full h-[60vh]" src="" title="YouTube video" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行榜 Modal -->
+  <div id="leaderboardModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="font-bold">排行榜（本機）</h3>
+        <span class="close-x" onclick="closeLeaderboard()">✖</span>
+      </div>
+      <div class="modal-body p-4">
+        <table>
+          <thead><tr><th>學號</th><th>姓名</th><th>完成關卡</th><th>完成率</th><th>最後更新</th><th>通關總時間</th></tr></thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+        <p class="text-xs text-gray-500 mt-2">*此排行榜紀錄於本裝置的瀏覽器 LocalStorage。</p>
+      </div>
+    </div>
+  </div>
 
   <script>
+    // ===== 常量設定（針對 5 關） =====
     const TOTAL = 5;
     const PASSWORD = "888";
     let currentStudent = null;
     let teacherMode = false;
 
-    const GLOSSARY = { ... };
+    // Glossary（沿用你原始羽球五關內容）
+    const GLOSSARY = {
+      '後場高遠球': '高遠球是從後場將球高弧度打向對方後場的基本技術。重點是側身引拍、擊球點在身體前上方，出拍時配合身體轉動，想像把球「送上去、送到遠方」。',
+      '網前放球': '放小球需要細膩手感。拍面要穩、力量小而連續，讓球貼網下墜。擊球點在胸口到肩膀之間、靠近網帶位置。',
+      '殺球練習': '殺球是向下的進攻球。抬肘引拍、身體向前上方延伸，擊球點在最高點稍前方，落地要有緩衝。先求穩定與落點，再追求力量。',
+      '基礎對打': '強調節奏與穩定。用七成功力，球過中線就回，專注步伐到位、拍面穩、落點清楚，可先建立「一高一平」的節奏。',
+      '米字步法': '模擬八方向移動（前、後、左、右與四個斜線）。關鍵是起動快、最後兩步小碎步調整、回中立位時重心在前腳掌。'
+    };
 
+    // 關卡資料（對應你五關）
     const CHALLENGES = [
-      {title:'後場高遠球', goal:'將球高弧度送到對方後場。', method:'與搭檔站在底線，連續 5 次成功打到後場區域。', video:'https://www.youtube.com/embed/CJXAXS82m5M'},
-      {title:'網前放球', goal:'控制輕柔過網與落點。', method:'在網前互相放小球，連續 5 次落在網前 1 公尺內。', video:'https://www.youtube.com/embed/dR-NXBW2m5c'},
-      {title:'殺球練習', goal:'學習向下發力與擊球動作。', method:'搭檔拋球到頭頂上方，連續 3 次將球向下打入對面場地。', video:'https://www.youtube.com/embed/lZSFU_OpbCw'},
+      {title:'後場高遠球', goal:'將球高弧度送到對方後場。', method:'與搭檔站在底線，連續 5 次成功打到後場區域。', video:'https://www.youtube.com/embed/tmZ52FLjC2Q'},
+      {title:'網前放球', goal:'控制輕柔過網與落點。', method:'在網前互相放小球，連續 5 次落在網前 1 公尺內。', video:'https://www.youtube.com/embed/0p9mA2a3cSg'},
+      {title:'殺球練習', goal:'學習向下發力與擊球動作。', method:'搭檔拋球到頭頂上方，連續 3 次將球向下打入對面場地。', video:'https://www.youtube.com/embed/2cJ0H0zv4wk'},
       {title:'基礎對打', goal:'建立回擊穩定度與協調性。', method:'以輕鬆力道來回對打，連續 10 次不落地。', video:'https://www.youtube.com/embed/mr1sB-2q8nU'},
-      {title:'米字步法', goal:'熟悉全場八方向移動。', method:'由中心依序移動至八個方向並回中心，於 60 秒內完成一循環。', video:'https://www.youtube.com/embed/b0ZXWXMsVDM'}
+      {title:'米字步法', goal:'熟悉全場八方向移動。', method:'由中心依序移動至八個方向並回中心，於 60 秒內完成一循環。', video:'https://www.youtube.com/embed/4uH9S8m7yXQ'}
     ];
 
-    // ... 其他程式碼保持不變
+    // ===== 小工具 =====
+    const qs = (sel) => document.querySelector(sel);
+    const nowISO = () => new Date().toISOString();
+    function keyFor(student) { return `badminton_${student}`; }
+    function getProgress(student) { return JSON.parse(localStorage.getItem(keyFor(student)) || '{}'); }
+    function setProgress(student, obj) { localStorage.setItem(keyFor(student), JSON.stringify(obj)); }
+    function beep() { const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='triangle'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32); o.start(); o.stop(ctx.currentTime + 0.33); }
+
+    // ===== 登入 / 模式 =====
+    function login() {
+      const id = qs('#studentId').value.trim();
+      const name = qs('#studentName').value.trim();
+      if(!id || !name) return alert('請輸入學號與姓名');
+      currentStudent = `${id}_${name}`;
+      const p = getProgress(currentStudent);
+      if(!p._meta) p._meta = { createdAt: nowISO(), lastUpdatedAt: nowISO(), wrongPassword: {}, firstFinishAt: null };
+      setProgress(currentStudent, p);
+      qs('#helloText').textContent = `Hi，${name}`;
+      qs('#loginSection').classList.add('hidden');
+      qs('#app').classList.remove('hidden');
+      renderCards(); loadStamps(); updateOverall();
+      qs('#modePill2').classList.toggle('hidden', !teacherMode);
+    }
+    function logout(){ currentStudent=null; qs('#app').classList.add('hidden'); qs('#loginSection').classList.remove('hidden'); qs('#studentId').value=''; qs('#studentName').value=''; }
+    function toggleTeacherMode(){ teacherMode=!teacherMode; qs('#modePill').classList.toggle('hidden', !teacherMode); if(currentStudent) qs('#modePill2').classList.toggle('hidden', !teacherMode); }
+
+    // ===== 關卡渲染 =====
+    function cardTemplate(idx, c){
+      return `
+      <article class="card p-5 stamp-wrap relative">
+        <svg id="stamp${idx}" class="stamp-svg" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="46" fill="none" stroke="#ef4444" stroke-width="6"></circle>
+          <text x="60" y="66" text-anchor="middle" font-size="26" font-weight="800" fill="#ef4444" style="letter-spacing:2px;">完成</text>
+        </svg>
+        <h3 class="text-xl font-bold text-[var(--headline)] mb-2">關卡${idx}：${c.title}</h3>
+        <p class="text-sm text-gray-700"><b>目標：</b>${c.goal}</p>
+        <p class="text-sm text-gray-700 mt-1"><b>執行方式：</b>${c.method}</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="btn btn-ghost" onclick="openGlossary('${c.title}')">✨ 說明術語</button>
+          <button class="btn btn-purple" onclick="openVideo(${idx}, '${c.title}', '${c.video}')">📘 學習資源</button>
+          <button class="btn btn-green" onclick="verify(${idx}, '${c.title}')">✅ 闖關成功</button>
+        </div>
+      </article>`;
+    }
+    function renderCards(){ qs('#cards').innerHTML = CHALLENGES.map((c,i)=>cardTemplate(i+1,c)).join(''); }
+
+    // ===== 印章與驗證 =====
+    function loadStamps(){ const p=getProgress(currentStudent); for(let i=1;i<=TOTAL;i++){ if(p['challenge'+i]===true) qs('#stamp'+i)?.classList.add('stamp-bounce'); } }
+    function markDone(i){ const el=qs('#stamp'+i); if(!el) return; el.classList.remove('stamp-bounce'); void el.offsetWidth; el.classList.add('stamp-bounce'); }
+    function verify(i, title){
+      const input = prompt(`請輸入密碼以確認「關卡${i}：${title}」過關：`);
+      const p = getProgress(currentStudent); if(!p._meta) p._meta={createdAt:nowISO(),lastUpdatedAt:nowISO(),wrongPassword:{},firstFinishAt:null};
+      if(input===null) return;
+      if(input===PASSWORD){ p['challenge'+i]=true; p._meta.lastUpdatedAt=nowISO(); const count=countCompleted(p); if(count===TOTAL && !p._meta.firstFinishAt) p._meta.firstFinishAt=nowISO(); setProgress(currentStudent,p); markDone(i); beep(); updateOverall(); alert(`🎉 恭喜！關卡${i} 已通過！`); }
+      else { const wp=p._meta.wrongPassword||{}; wp[i]=(wp[i]||0)+1; p._meta.wrongPassword=wp; p._meta.lastUpdatedAt=nowISO(); setProgress(currentStudent,p); alert(wp[i]>=3?'❗ 已錯誤輸入 3 次，請確認是否完成任務再嘗試。':'❌ 密碼錯誤，請再試一次。'); }
+    }
+
+    // ===== 進度 + 獎勵 =====
+    let overallChart;
+    function countCompleted(p){ return Object.keys(p).filter(k=>k.startsWith('challenge') && p[k]===true).length; }
+    function updateOverall(){
+      const p=getProgress(currentStudent); const done=countCompleted(p); const percent=Math.round(done/TOTAL*100);
+      qs('#overallText').textContent = `已完成 ${done}/${TOTAL} (${percent}%)`;
+      qs('#badge3').classList.toggle('hidden', done<3);
+      qs('#badge4').classList.toggle('hidden', done<4);
+      qs('#badge5').classList.toggle('hidden', done<5);
+      const ctx=document.getElementById('overallChart').getContext('2d');
+      if(!overallChart){ overallChart=new Chart(ctx,{ type:'doughnut', data:{ datasets:[{ data:[done, TOTAL-done], borderWidth:4 }]}, options:{ cutout:'75%', plugins:{ legend:{display:false}, tooltip:{enabled:false} } } }); }
+      else { overallChart.data.datasets[0].data=[done, TOTAL-done]; overallChart.update(); }
+      if(done===TOTAL) showTrophy(); else hideTrophy();
+    }
+    function showTrophy(){ document.getElementById('trophy').classList.add('show'); beep(); }
+    function hideTrophy(){ document.getElementById('trophy').classList.remove('show'); }
+
+    // ===== Modal：Glossary / Video =====
+    function openGlossary(title){ document.getElementById('glossaryTitle').textContent = `說明術語：${title}`; document.getElementById('glossaryBody').textContent = GLOSSARY[title] || '（尚無說明）'; document.getElementById('glossaryModal').classList.add('show'); }
+    function closeGlossary(){ document.getElementById('glossaryModal').classList.remove('show'); }
+    function openVideo(i,title,url){ document.getElementById('videoTitle').textContent = `學習資源：關卡${i}「${title}」`; const src = url.includes('embed')?url:url.replace('watch?v=','embed/'); document.getElementById('videoFrame').src = src+'?autoplay=1&rel=0'; document.getElementById('videoModal').classList.add('show'); }
+    function closeVideo(){ document.getElementById('videoFrame').src=''; document.getElementById('videoModal').classList.remove('show'); }
+
+    // ===== 排行榜（本機） =====
+    function openLeaderboard(){ const body=document.getElementById('leaderboardBody'); body.innerHTML=''; for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(!key.startsWith('badminton_')) continue; const who=key.replace('badminton_',''); const [sid,name]=who.split('_'); const p=JSON.parse(localStorage.getItem(key)||'{}'); const done=countCompleted(p); const percent=Math.round(done/TOTAL*100); const meta=p._meta||{}; const last=meta.lastUpdatedAt?new Date(meta.lastUpdatedAt).toLocaleString():'-'; let totalTime='-'; if(meta.firstFinishAt && meta.createdAt){ const t=(new Date(meta.firstFinishAt)-new Date(meta.createdAt))/1000; totalTime=`${Math.floor(t/60)}分${Math.floor(t%60)}秒`; } body.insertAdjacentHTML('beforeend',`<tr><td>${sid}</td><td>${name}</td><td>${done}/${TOTAL}</td><td>${percent}%</td><td>${last}</td><td>${totalTime}</td></tr>`); } document.getElementById('leaderboardModal').classList.add('show'); }
+    function closeLeaderboard(){ document.getElementById('leaderboardModal').classList.remove('show'); }
   </script>
 </body>
 </html>
