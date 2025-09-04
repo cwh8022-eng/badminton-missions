@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>羽球技能闖關任務（採用軟式網球設計原理）</title>
+  <title>羽球技能闖關任務</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -19,7 +19,7 @@
     body { background: var(--paper); color: var(--ink); }
     .card { background:#fff; border-radius: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
 
-    /* 完成印章（沿用設計原理） */
+    /* 完成印章 */
     .stamp-wrap { position: relative; }
     .stamp-svg {
       position:absolute; top:-10px; left:50%; transform:translateX(-50%) rotate(-8deg) scale(0.2);
@@ -41,7 +41,12 @@
     .close-x { font-size:20px; font-weight:700; cursor:pointer; }
     .modal-body { padding:0; }
 
-    /* 徽章 */
+    /* 按鈕/徽章 */
+    .btn { padding:.6rem 1rem; border-radius:.75rem; font-weight:700; }
+    .btn-green { background:var(--success); color:#fff; }
+    .btn-purple { background:var(--accent); color:#fff; }
+    .btn-red { background:var(--danger); color:#fff; }
+    .btn-ghost { background:#f3f4f6; }
     .badge { display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .75rem; border-radius:999px; font-weight:700; }
     .badge-silver { background:#eef2ff; border:2px solid #c7d2fe; }
     .badge-gold { background:#fff7e6; border:2px solid #facc15; }
@@ -52,14 +57,6 @@
     .trophy-wrap.show { display:block; animation: dropIn 1s ease-out forwards, glow 2s ease-in-out 1s infinite alternate; }
     @keyframes dropIn { 0% { top:-40vh; } 80% { top:15vh; } 100% { top:18vh; } }
     @keyframes glow { from { filter: drop-shadow(0 0 0 rgba(250, 204, 21, .8)); } to { filter: drop-shadow(0 0 18px rgba(250, 204, 21, 1)); } }
-
-    /* 小工具 */
-    .btn { padding:.6rem 1rem; border-radius:.75rem; font-weight:700; }
-    .btn-green { background:var(--success); color:#fff; }
-    .btn-purple { background:var(--accent); color:#fff; }
-    .btn-red { background:var(--danger); color:#fff; }
-    .btn-ghost { background:#f3f4f6; }
-    .teacher-badge { background:#ede9fe; color:#5b21b6; border:1px dashed #a78bfa; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -82,35 +79,29 @@
   <!-- 頁首 -->
   <header class="text-center px-4 py-6">
     <h1 class="text-3xl md:text-4xl font-extrabold text-[var(--headline)]">羽球技能闖關任務單</h1>
+    <p class="text-sm text-gray-600 mt-2">登入後開始闖關 — 完成每一關輸入密碼 <b>888</b> 取得完成印章！</p>
+  </header>
 
-    
-  <!-- 登入區 -->
+  <!-- 登入區（移除教師模式/排行榜） -->
   <section id="loginSection" class="max-w-xl card mx-auto p-6 my-6">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-bold">學生登入</h2>
-      <span id="modePill" class="badge teacher-badge hidden">教師模式</span>
-    </div>
+    <h2 class="text-xl font-bold">學生登入</h2>
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
       <input id="studentId" class="border rounded-lg p-3" placeholder="學號" />
       <input id="studentName" class="border rounded-lg p-3" placeholder="姓名" />
     </div>
     <div class="mt-4 flex gap-3">
       <button class="btn btn-green" onclick="login()">登入</button>
-      <button class="btn btn-ghost" onclick="toggleTeacherMode()">切換教師模式</button>
     </div>
-    <p class="text-xs text-gray-500 mt-3">提示：教師模式可查看排行榜與總覽，用於課堂展示。</p>
   </section>
 
   <!-- 主內容 -->
   <main id="app" class="container mx-auto px-4 pb-20 hidden">
-    <!-- 控制列 -->
+    <!-- 控制列（保留問候與登出） -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-2">
         <span id="helloText" class="font-bold"></span>
-        <span id="modePill2" class="badge teacher-badge hidden">教師模式</span>
       </div>
       <div class="flex gap-2">
-        <button class="btn btn-purple" onclick="openLeaderboard()">排行榜</button>
         <button class="btn btn-red" onclick="logout()">登出</button>
       </div>
     </div>
@@ -169,31 +160,13 @@
     </div>
   </div>
 
-  <!-- 排行榜 Modal -->
-  <div id="leaderboardModal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="font-bold">排行榜（本機）</h3>
-        <span class="close-x" onclick="closeLeaderboard()">✖</span>
-      </div>
-      <div class="modal-body p-4">
-        <table>
-          <thead><tr><th>學號</th><th>姓名</th><th>完成關卡</th><th>完成率</th><th>最後更新</th><th>通關總時間</th></tr></thead>
-          <tbody id="leaderboardBody"></tbody>
-        </table>
-        <p class="text-xs text-gray-500 mt-2">*此排行榜紀錄於本裝置的瀏覽器 LocalStorage。</p>
-      </div>
-    </div>
-  </div>
-
   <script>
-    // ===== 常量設定（針對 5 關） =====
+    // ===== 常量設定（5 關） =====
     const TOTAL = 5;
     const PASSWORD = "888";
     let currentStudent = null;
-    let teacherMode = false;
 
-    // Glossary（沿用你原始羽球五關內容）
+    // Glossary（沿用原始羽球五關文字）
     const GLOSSARY = {
       '後場高遠球': '高遠球是從後場將球高弧度打向對方後場的基本技術。重點是側身引拍、擊球點在身體前上方，出拍時配合身體轉動，想像把球「送上去、送到遠方」。',
       '網前放球': '放小球需要細膩手感。拍面要穩、力量小而連續，讓球貼網下墜。擊球點在胸口到肩膀之間、靠近網帶位置。',
@@ -202,7 +175,7 @@
       '米字步法': '模擬八方向移動（前、後、左、右與四個斜線）。關鍵是起動快、最後兩步小碎步調整、回中立位時重心在前腳掌。'
     };
 
-    // 關卡資料（對應你五關） — 已依照你提供的學習資源網址設定
+    // 關卡資料（含你指定的影片）
     const CHALLENGES = [
       {title:'後場高遠球', goal:'將球高弧度送到對方後場。', method:'與搭檔站在底線，連續 5 次成功打到後場區域。', video:'https://www.youtube.com/watch?v=CJXAXS82m5M'},
       {title:'網前放球', goal:'控制輕柔過網與落點。', method:'在網前互相放小球，連續 5 次落在網前 1 公尺內。', video:'https://www.youtube.com/watch?v=dR-NXBW2m5c'},
@@ -219,7 +192,7 @@
     function setProgress(student, obj) { localStorage.setItem(keyFor(student), JSON.stringify(obj)); }
     function beep() { const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='triangle'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32); o.start(); o.stop(ctx.currentTime + 0.33); }
 
-    // ===== 登入 / 模式 =====
+    // ===== 登入 / 登出 =====
     function login() {
       const id = qs('#studentId').value.trim();
       const name = qs('#studentName').value.trim();
@@ -232,10 +205,8 @@
       qs('#loginSection').classList.add('hidden');
       qs('#app').classList.remove('hidden');
       renderCards(); loadStamps(); updateOverall();
-      qs('#modePill2').classList.toggle('hidden', !teacherMode);
     }
     function logout(){ currentStudent=null; qs('#app').classList.add('hidden'); qs('#loginSection').classList.remove('hidden'); qs('#studentId').value=''; qs('#studentName').value=''; }
-    function toggleTeacherMode(){ teacherMode=!teacherMode; qs('#modePill').classList.toggle('hidden', !teacherMode); if(currentStudent) qs('#modePill2').classList.toggle('hidden', !teacherMode); }
 
     // ===== 關卡渲染 =====
     function cardTemplate(idx, c){
@@ -290,10 +261,6 @@
     function closeGlossary(){ document.getElementById('glossaryModal').classList.remove('show'); }
     function openVideo(i,title,url){ document.getElementById('videoTitle').textContent = `學習資源：關卡${i}「${title}」`; const src = url.includes('embed')?url:url.replace('watch?v=','embed/'); document.getElementById('videoFrame').src = src+'?autoplay=1&rel=0'; document.getElementById('videoModal').classList.add('show'); }
     function closeVideo(){ document.getElementById('videoFrame').src=''; document.getElementById('videoModal').classList.remove('show'); }
-
-    // ===== 排行榜（本機） =====
-    function openLeaderboard(){ const body=document.getElementById('leaderboardBody'); body.innerHTML=''; for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(!key.startsWith('badminton_')) continue; const who=key.replace('badminton_',''); const [sid,name]=who.split('_'); const p=JSON.parse(localStorage.getItem(key)||'{}'); const done=countCompleted(p); const percent=Math.round(done/TOTAL*100); const meta=p._meta||{}; const last=meta.lastUpdatedAt?new Date(meta.lastUpdatedAt).toLocaleString():'-'; let totalTime='-'; if(meta.firstFinishAt && meta.createdAt){ const t=(new Date(meta.firstFinishAt)-new Date(meta.createdAt))/1000; totalTime=`${Math.floor(t/60)}分${Math.floor(t%60)}秒`; } body.insertAdjacentHTML('beforeend',`<tr><td>${sid}</td><td>${name}</td><td>${done}/${TOTAL}</td><td>${percent}%</td><td>${last}</td><td>${totalTime}</td></tr>`); } document.getElementById('leaderboardModal').classList.add('show'); }
-    function closeLeaderboard(){ document.getElementById('leaderboardModal').classList.remove('show'); }
   </script>
 </body>
 </html>
